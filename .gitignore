@@ -43,4 +43,5 @@ docker/mysql/init/*.csv
 
 # Frontend build output
 frontend/dist/
+frontend/node_modules/
 docker/nginx/dist/
