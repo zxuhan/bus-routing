@@ -2,7 +2,8 @@
 
 A full-stack web app that finds optimal bus routes between any two zip codes in Maastricht, with real-time directions and an interactive map.
 
-<screenshot_placeholder>
+<img width="1570" height="955" alt="Screenshot 2026-03-24 at 16 12 40" src="https://github.com/user-attachments/assets/bc743fbb-8b9c-41b2-892d-f6e0f0812b81" />
+
 
 
 ## What I Built
@@ -24,8 +25,9 @@ A full-stack web app that finds optimal bus routes between any two zip codes in 
 |---|---|
 | Backend | Java 21, Spring Boot, MySQL |
 | Algorithm | A* search (custom implementation) |
-| External APIs | Google Maps Distance Matrix, Google Maps JS |
+| External APIs | Google Maps Distance Matrix, Google Maps JS API|
 | Frontend | React 18, Vite, `@react-google-maps/api` |
+| Infrastructure | Docker Compose, Nginx reverse proxy|
 
 ## How It Works
 
@@ -37,16 +39,22 @@ A full-stack web app that finds optimal bus routes between any two zip codes in 
 
 ## Running Locally
 
-**Backend** — requires MySQL with GTFS data and a Google Maps API key:
-```bash
-DB_URL=... DB_USER=... DB_PASSWORD=... GOOGLE_MAPS_API_KEY=... ./mvnw spring-boot:run
-```
+### Docker (recommended)
 
-**Frontend:**
-```bash
-cd frontend
-cp .env.example .env   # add VITE_GOOGLE_MAPS_API_KEY
-npm install && npm run dev
-```
+Requires Docker and a Google Maps API key.
 
-Then open `http://localhost:5173` and search between any two Maastricht zip codes (e.g. `6211SM` → `6229EG`).
+```bash
+# 1. Create a .env file in the project root
+cat > .env <<EOF
+DB_PASSWORD=yourpassword
+GOOGLE_MAPS_API_KEY=your_key_here
+EOF
+
+# 2. Add your Google Maps key to the frontend env
+echo "VITE_GOOGLE_MAPS_API_KEY=your_key_here" > frontend/.env
+
+# 3. Build the frontend and start all services
+cd frontend && npm install && npm run build && cd ..
+docker compose up --build
+```
+Open `http://localhost` and search between any two Maastricht zip codes (e.g. `6211SM` → `6229EG`).
