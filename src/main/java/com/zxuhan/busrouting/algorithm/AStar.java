@@ -1,30 +1,45 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.algorithm;
 
-import src.java.Main.CalculateDistance;
+import com.zxuhan.busrouting.model.*;
+import com.zxuhan.busrouting.repository.GraphRepository;
+import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.zxuhan.busrouting.util.CalculateDistance;
+import org.springframework.beans.factory.annotation.Value;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+import static com.zxuhan.busrouting.util.CalculateTimeDiff.calculateTimeDifference;
 
 
 /**
  * AStar class implements the A* search algorithm for finding the shortest path between two places.
  */
-public class AStar implements Serializable {
+@Component
+public class AStar {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     private final int AVGWALKINGTIME = 70; // Average walking speed in meters/min
     private final Graph graph;
+    private final GraphRepository graphRepository;
     private List<String> directions;
 
-    public AStar(Graph graph) {
+    @Value("${google.maps.api.key}")
+    private String googleMapsApiKey;
+
+    public AStar(Graph graph, GraphRepository graphRepository) {
         this.graph = graph;
-        directions = new ArrayList<>();
+        this.graphRepository = graphRepository;
+        this.directions = new ArrayList<>();
     }
 
     public List<String> getDirections() {
@@ -39,30 +54,20 @@ public class AStar implements Serializable {
      * Main method to find the shortest path between two places.
      *
      * @param startPlace The starting place.
-     * @param endPlace The ending place.
+     * @param endPlace   The ending place.
+     * @param time       The departure time.
      * @return A list of places representing the shortest path.
      * @throws Exception If an error occurs during the search.
      */
-    public List<Place> findShortestPath(Place startPlace, Place endPlace) throws Exception {
-        connectBusStops();
+    public List<Place> findShortestPath(Place startPlace, Place endPlace, LocalTime time) throws Exception {
+        // Reset directions for each new search
+        this.directions = new ArrayList<>();
 
+        connectBusStops();
         connectPlaceToGraph(startPlace, 10);
         connectPlaceToGraph(endPlace, 10);
 
-        // Get the current local time
-        LocalTime currentTime = LocalTime.now();
-
-        // Round down the seconds by setting them to zero
-        LocalTime roundedTime = currentTime.withSecond(0).withNano(0);
-
-        // Define a formatter to ensure output is in HH:mm:ss format
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-        // Format the rounded time
-        String formattedTime = roundedTime.format(formatter);
-        String[] time= formattedTime.split(":");
-
-        return aStarSearch(startPlace, endPlace, LocalTime.of(Integer.parseInt(time[0]), Integer.parseInt(time[1]), Integer.parseInt(time[2])));
+        return aStarSearch(startPlace, endPlace, time);
     }
 
     /**
@@ -93,11 +98,11 @@ public class AStar implements Serializable {
      */
     private void connectBusStops() {
         for (Place p1 : graph.getVertices()) {
-             for (Place p2 : graph.getVertices()) {
+            for (Place p2 : graph.getVertices()) {
                 if (p2.equals(p1)) {
                     continue;
                 }
-                int walkingDist = (int) Math.round(CalculateDistance.distanceBetween(p1.lat, p1.lon, p2.lat, p2.lon));
+                int walkingDist = (int) Math.round(CalculateDistance.distanceBetween(p1.getLatitude(), p1.getLongitude(), p2.getLatitude(), p2.getLongitude()));
                 if (walkingDist <= 100) {
                     long walkingTime = Math.ceilDiv(walkingDist, AVGWALKINGTIME);
 
@@ -115,8 +120,8 @@ public class AStar implements Serializable {
     /**
      * A* search algorithm to find the shortest path between the start and goal places.
      *
-     * @param start The starting place.
-     * @param goal The goal place.
+     * @param start     The starting place.
+     * @param goal      The goal place.
      * @param startTime The starting time.
      * @return A list of places representing the shortest path.
      */
@@ -172,7 +177,7 @@ public class AStar implements Serializable {
                 for (Trip trip : trips) {
 
                     if (trip.getDepartureTime().compareTo(currentSearchNode.time) >= 0) {
-                        timeCost = currentSearchNode.g + GraphBuilder.calculateTimeDifference(currentSearchNode.time, trip.getArriveTime());
+                        timeCost = currentSearchNode.g + calculateTimeDifference(currentSearchNode.time, trip.getArriveTime());
                         distCost = currentSearchNode.dist + trip.getShapeDistTraveled();
                         LocalTime time = trip.getArriveTime();
                         SearchNode searchNode = new SearchNode(edge.getTo(), timeCost, heuristic(edge.getTo(), goal), time, distCost, currentSearchNode, trip);
@@ -194,7 +199,7 @@ public class AStar implements Serializable {
      * Heuristic function to estimate the distance between the current place and the goal.
      *
      * @param place The current place.
-     * @param goal The goal place.
+     * @param goal  The goal place.
      * @return The estimated distance.
      */
     private long heuristic(Place place, Place goal) {
@@ -301,7 +306,7 @@ public class AStar implements Serializable {
                     end = pathNodes.get(i - 1).place;
 
                     try {
-                        List<BusRouteShape> shapes = GraphBuilder.getBusRouteShapes(prev);
+                        List<BusRouteShape> shapes = graphRepository.getBusRouteShapes(prev);
                         stops.addAll(extractShapeSegment(start, end, shapes));
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
@@ -317,7 +322,7 @@ public class AStar implements Serializable {
                     end = pathNodes.get(i - 1).place;
 
                     try {
-                        List<BusRouteShape> shapes = GraphBuilder.getBusRouteShapes(prev);
+                        List<BusRouteShape> shapes = graphRepository.getBusRouteShapes(prev);
                         stops.addAll(extractShapeSegment(start, end, shapes));
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
@@ -336,8 +341,8 @@ public class AStar implements Serializable {
     /**
      * Method to extract the shape segment between the start and end places.
      *
-     * @param start The starting place.
-     * @param end The ending place.
+     * @param start  The starting place.
+     * @param end    The ending place.
      * @param shapes The list of bus route shapes.
      * @return A list of places representing the shape segment.
      */
@@ -364,7 +369,7 @@ public class AStar implements Serializable {
     /**
      * Method to find the closest shape point to a place.
      *
-     * @param place The place to find the closest shape point.
+     * @param place  The place to find the closest shape point.
      * @param shapes The list of bus route shapes.
      * @return The index of the closest shape point.
      */
@@ -387,19 +392,19 @@ public class AStar implements Serializable {
     /**
      * Method to get the real walking distance between two places using Google Maps API.
      *
-     * @param origin The origin place.
+     * @param origin      The origin place.
      * @param destination The destination place.
      * @return The real walking distance in meters.
      * @throws Exception If an error occurs while getting the distance.
      */
-    public static int getRealDistance(Place origin, Place destination) throws Exception {
-        String apiKey = "AIzaSyAZwfzWK71qIgXSleA-02n-oXfo5OjOhhU";
+    public int getRealDistance(Place origin, Place destination) throws Exception {
+        String apiKey = googleMapsApiKey;
         String originStr = origin.lat + "," + origin.lon;
         String destinationStr = destination.lat + "," + destination.lon;
         String urlString = "https://maps.googleapis.com/maps/api/distancematrix/json?origins=" + originStr +
                 "&destinations=" + destinationStr + "&mode=walking&key=" + apiKey;
 
-        URL url = new URL(urlString);
+        URL url = URI.create(urlString).toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
 
@@ -414,33 +419,11 @@ public class AStar implements Serializable {
         conn.disconnect();
 
         // Parse the JSON response
-        JSONObject jsonResponse = new JSONObject(content.toString());
-        JSONArray rows = jsonResponse.getJSONArray("rows");
-        JSONObject elements = rows.getJSONObject(0);
-        JSONArray element = elements.getJSONArray("elements");
-        JSONObject distance = element.getJSONObject(0).getJSONObject("distance");
-
-        return distance.getInt("value");
-    }
-
-    public static void main(String[] args) throws Exception {
-        Graph graph = new Graph();
-        GraphBuilder graphBuilder = new GraphBuilder(graph);
-        graphBuilder.getBusStops();
-        Place startPlace  = new Place(50.8419194317073, 5.64520881707317);
-        Place endPlace = new Place(50.8864, 5.7145);
-
-        AStar aStar = new AStar(graph);
-        List<Place> path = aStar.findShortestPath(startPlace, endPlace);
-
-        if (path.isEmpty()) {
-            System.out.println("No path found.");
-        } else {
-            System.out.println("Path found: ");
-            for (String s : aStar.directions) {
-                System.out.println(s);
-            }
-
-        }
+        JsonNode jsonResponse = objectMapper.readTree(content.toString());
+        JsonNode distance = jsonResponse
+                .get("rows").get(0)
+                .get("elements").get(0)
+                .get("distance");
+        return distance.get("value").asInt();
     }
 }

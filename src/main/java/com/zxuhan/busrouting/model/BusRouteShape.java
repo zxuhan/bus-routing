@@ -1,14 +1,17 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.model;
+
+import lombok.Getter;
 
 /**
  * The BusRouteShape class represents a point on a bus route shape.
  */
+
 public class BusRouteShape {
-    protected int shapeId; // The ID of the shape
-    protected int shapePtSequence; // The sequence of the point in the shape
-    protected double shapePtLat; // The latitude of the shape point
-    protected double shapePtLon; // The longitude of the shape point
-    protected double shapeDistTraveled; // The distance traveled along the shape to this point
+    public int shapeId; // The ID of the shape
+    public int shapePtSequence; // The sequence of the point in the shape
+    public double shapePtLat; // The latitude of the shape point
+    public double shapePtLon; // The longitude of the shape point
+    public double shapeDistTraveled; // The distance traveled along the shape to this point
 
     /**
      * Constructor to initialize a BusRouteShape object.

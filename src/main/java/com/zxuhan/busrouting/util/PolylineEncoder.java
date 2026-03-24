@@ -1,4 +1,6 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.util;
+
+import com.zxuhan.busrouting.model.Place;
 
 import java.util.List;
 

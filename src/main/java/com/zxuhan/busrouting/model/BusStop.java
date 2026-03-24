@@ -1,4 +1,4 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.model;
 
 import java.io.Serializable;
 import java.util.Objects;

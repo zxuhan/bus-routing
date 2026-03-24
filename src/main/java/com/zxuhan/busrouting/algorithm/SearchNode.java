@@ -1,4 +1,7 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.algorithm;
+
+import com.zxuhan.busrouting.model.Place;
+import com.zxuhan.busrouting.model.Trip;
 
 import java.time.LocalTime;
 import java.util.Objects;

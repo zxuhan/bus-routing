@@ -28,7 +28,7 @@ CREATE TABLE stops_time (
 
     PRIMARY KEY (trip_id, stop_sequence),
     -- Index for faster lookups when joining with the shapes table
-    INDEX idx_shape_id (shape_id),
+    INDEX idx_shape_id (shape_id)
 );
 
 -- Table: zip_lat_lon

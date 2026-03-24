@@ -1,11 +1,13 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.model;
 
 import java.io.Serializable;
 import java.util.*;
+import org.springframework.stereotype.Component;
 
 /**
  * The Graph class represents a graph data structure with vertices (places) and edges (connections between places).
  */
+@Component
 public class Graph implements Serializable{
     private Map<Place, Set<Edge>> adjList = new HashMap<>();
 

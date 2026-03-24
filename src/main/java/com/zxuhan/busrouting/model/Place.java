@@ -1,24 +1,19 @@
-package com.zxuhan.busrouting;
+package com.zxuhan.busrouting.model;
 
-import src.java.Main.CalculateDistance;
-
-import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Objects;
+
+import static com.zxuhan.busrouting.util.CalculateDistance.distanceBetween;
 
 /**
  * Represents a geographic place identified by a zip code, latitude, and longitude.
  */
 public class Place implements Serializable{
-    protected String name;
-    protected String zipCode;
-    protected String type;
-    protected double lat;
-    protected double lon;
-
-    // TODO create a place object via zipcode.
-    public Place(String zipcode) {}
+    public String name;
+    public String zipCode;
+    public String type;
+    public double lat;
+    public double lon;
 
 
     public Place(double latitude, double longitude) {
@@ -26,16 +21,8 @@ public class Place implements Serializable{
         this.lon = longitude;
     }
 
-    public Place(String name, String zipCode, double latitude, double longitude){
-        this.name = name;
-        this.zipCode = zipCode;
-        this.lat = latitude;
-        this.lon = longitude;
-    }
-
-    // TODO Calculates the distance between two zip codes using the Haversine formula.
     public double distanceTo(double lat, double lon) {
-        return CalculateDistance.distanceBetween(this.lat, this.lon, lat, lon);
+        return distanceBetween(this.lat, this.lon, lat, lon);
     }
 
     public double getLatitude() {
